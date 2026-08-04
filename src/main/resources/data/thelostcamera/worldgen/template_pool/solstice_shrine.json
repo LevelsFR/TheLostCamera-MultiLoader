@@ -1,0 +1,14 @@
+{
+  "fallback": "minecraft:empty",
+  "elements": [
+    {
+      "weight": 1,
+      "element": {
+        "element_type": "minecraft:single_pool_element",
+        "location": "thelostcamera:ruined/solstice_shrine",
+        "processors": "thelostcamera:ignore_markers",
+        "projection": "rigid"
+      }
+    }
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "structures": [
+    {
+      "structure": "thelostcamera:frontier_watchtower",
+      "weight": 1
+    }
+  ],
+  "placement": {
+    "type": "minecraft:random_spread",
+    "spacing": 46,
+    "separation": 23,
+    "salt": 260804,
+    "frequency": 0.66
+  }
+}

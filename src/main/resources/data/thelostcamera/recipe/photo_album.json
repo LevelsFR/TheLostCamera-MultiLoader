@@ -1,0 +1,14 @@
+{
+  "type": "crafting_shapeless",
+  "ingredients": [
+    "minecraft:leather",
+    "minecraft:string",
+    "minecraft:paper",
+    "minecraft:paper",
+    "minecraft:paper"
+  ],
+  "result": {
+    "id": "thelostcamera:photo_album",
+    "count": 1
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "type": "crafting_shapeless",
+  "ingredients": [
+    "minecraft:glass_pane",
+    "minecraft:paper",
+    "minecraft:black_dye"
+  ],
+  "result": {
+    "id": "thelostcamera:photographic_plate",
+    "count": 4
+  }
+}
