@@ -3,6 +3,7 @@ package com.levelscraft7.thelostcamera.network;
 import com.levelscraft7.thelostcamera.network.payload.AlbumSnapshotPayload;
 import com.levelscraft7.thelostcamera.network.payload.CaptureRequestPayload;
 import com.levelscraft7.thelostcamera.network.payload.OpenAlbumPayload;
+import com.levelscraft7.thelostcamera.network.payload.OpenDarkroomPayload;
 import com.levelscraft7.thelostcamera.network.payload.PhotoImageChunkPayload;
 import com.levelscraft7.thelostcamera.network.payload.PhotoUnavailablePayload;
 import com.levelscraft7.thelostcamera.network.payload.RestorationShakePayload;
@@ -18,6 +19,7 @@ public final class ClientPayloadBridge {
     private static BiConsumer<PhotoUnavailablePayload, IPayloadContext> unavailableHandler = (payload, context) -> { };
     private static BiConsumer<RestorationShakePayload, IPayloadContext> shakeHandler = (payload, context) -> { };
     private static BiConsumer<OpenAlbumPayload, IPayloadContext> openAlbumHandler = (payload, context) -> { };
+    private static BiConsumer<OpenDarkroomPayload, IPayloadContext> openDarkroomHandler = (payload, context) -> { };
     private static BiConsumer<AlbumSnapshotPayload, IPayloadContext> albumSnapshotHandler = (payload, context) -> { };
 
     private ClientPayloadBridge() {
@@ -29,6 +31,7 @@ public final class ClientPayloadBridge {
             BiConsumer<PhotoUnavailablePayload, IPayloadContext> unavailable,
             BiConsumer<RestorationShakePayload, IPayloadContext> shake,
             BiConsumer<OpenAlbumPayload, IPayloadContext> openAlbum,
+            BiConsumer<OpenDarkroomPayload, IPayloadContext> openDarkroom,
             BiConsumer<AlbumSnapshotPayload, IPayloadContext> albumSnapshot
     ) {
         captureHandler = Objects.requireNonNull(capture);
@@ -36,6 +39,7 @@ public final class ClientPayloadBridge {
         unavailableHandler = Objects.requireNonNull(unavailable);
         shakeHandler = Objects.requireNonNull(shake);
         openAlbumHandler = Objects.requireNonNull(openAlbum);
+        openDarkroomHandler = Objects.requireNonNull(openDarkroom);
         albumSnapshotHandler = Objects.requireNonNull(albumSnapshot);
     }
 
@@ -44,5 +48,6 @@ public final class ClientPayloadBridge {
     public static void handleUnavailable(PhotoUnavailablePayload payload, IPayloadContext context) { unavailableHandler.accept(payload, context); }
     public static void handleShake(RestorationShakePayload payload, IPayloadContext context) { shakeHandler.accept(payload, context); }
     public static void handleOpenAlbum(OpenAlbumPayload payload, IPayloadContext context) { openAlbumHandler.accept(payload, context); }
+    public static void handleOpenDarkroom(OpenDarkroomPayload payload, IPayloadContext context) { openDarkroomHandler.accept(payload, context); }
     public static void handleAlbumSnapshot(AlbumSnapshotPayload payload, IPayloadContext context) { albumSnapshotHandler.accept(payload, context); }
 }

@@ -1,0 +1,6 @@
+{
+  "type":"crafting_shaped",
+  "pattern":["PPP","CRC","PPP"],
+  "key":{"P":"minecraft:dark_oak_planks","C":"minecraft:copper_ingot","R":"minecraft:redstone"},
+  "result":{"id":"thelostcamera:darkroom_table","count":1}
+}

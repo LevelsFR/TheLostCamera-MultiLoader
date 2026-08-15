@@ -15,6 +15,7 @@ import java.util.Map;
 /** Server-side restoration runtime for ruins that no longer place a technical anchor block in the world. */
 public final class VirtualRuinRestorationManager {
     private static final Map<Key, RuinAnchorBlockEntity> ACTIVE = new HashMap<>();
+    private static MinecraftServer activeServer;
 
     private VirtualRuinRestorationManager() {
     }
@@ -45,7 +46,8 @@ public final class VirtualRuinRestorationManager {
             return false;
         }
 
-        restoredRuins.markStarted(level, anchorPos, ruinId);
+        restoredRuins.markStarted(level, anchorPos, ruinId,
+                forcedRotation == null ? virtual.currentRotationForPersistence() : forcedRotation);
         ACTIVE.put(key, virtual);
         return true;
     }
@@ -63,10 +65,16 @@ public final class VirtualRuinRestorationManager {
     }
 
     public static void onServerTick(ServerTickEvent.Post event) {
-        tick(event.getServer());
+        MinecraftServer server = event.getServer();
+        if (activeServer != server) {
+            activeServer = server;
+            ACTIVE.clear();
+        }
+        tick(server);
     }
 
     private static void tick(MinecraftServer server) {
+        recoverInterruptedRestorations(server);
         Iterator<Map.Entry<Key, RuinAnchorBlockEntity>> iterator = ACTIVE.entrySet().iterator();
         while (iterator.hasNext()) {
             Map.Entry<Key, RuinAnchorBlockEntity> entry = iterator.next();
@@ -83,6 +91,33 @@ public final class VirtualRuinRestorationManager {
                 iterator.remove();
             } else if (!virtual.isRestoring()) {
                 iterator.remove();
+            }
+        }
+    }
+
+    private static void recoverInterruptedRestorations(MinecraftServer server) {
+        if (Math.floorMod(server.getTickCount(), 20) != 0) {
+            return;
+        }
+        RestoredRuinSavedData data = RestoredRuinSavedData.get(server.overworld());
+        for (RestoredRuinSavedData.PendingRestoration pending : data.pendingRestorations()) {
+            ServerLevel targetLevel = null;
+            for (ServerLevel candidate : server.getAllLevels()) {
+                if (candidate.dimension().toString().equals(pending.dimension())) {
+                    targetLevel = candidate;
+                    break;
+                }
+            }
+            if (targetLevel == null || !targetLevel.hasChunkAt(pending.anchorPos())) {
+                continue;
+            }
+            Key key = new Key(targetLevel.dimension(), pending.anchorPos().immutable());
+            if (ACTIVE.containsKey(key)) {
+                continue;
+            }
+            if (RuinAnchorBlockEntity.restoreSilently(
+                    targetLevel, pending.anchorPos(), pending.ruinId(), pending.rotation())) {
+                data.markCompleted(targetLevel, pending.anchorPos(), pending.ruinId());
             }
         }
     }

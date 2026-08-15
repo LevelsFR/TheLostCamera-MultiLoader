@@ -116,6 +116,7 @@ public final class RestorationTemplateLoader {
                 restored.sizeZ,
                 ruinedAnchor,
                 restored.anchor,
+                restoredAlignment,
                 Map.copyOf(ruinedStates),
                 List.copyOf(targets),
                 List.copyOf(entities)

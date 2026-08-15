@@ -22,7 +22,6 @@ import net.neoforged.neoforge.client.event.RenderGuiLayerEvent;
 import net.neoforged.neoforge.client.event.RenderHandEvent;
 import net.neoforged.neoforge.client.event.ViewportEvent;
 import net.neoforged.neoforge.client.network.ClientPacketDistributor;
-import org.lwjgl.glfw.GLFW;
 
 /** Client-only viewfinder, fluid zoom and screenshot hooks. */
 public final class CameraClientEvents {
@@ -34,16 +33,20 @@ public final class CameraClientEvents {
             TheLostCamera.MOD_ID,
             "textures/gui/dark_panel.png"
     );
+    private static final int EXPOSURE_TEXT = 0xFFFFF2D0;
+    private static final int EXPOSURE_PANEL = 0xB0000000;
+    private static final int EXPOSURE_BORDER = 0xFFD2A65A;
+    private static final int RUIN_LOCK_TEXT = 0xFFFFE3A0;
 
     @SubscribeEvent
     public void renderOverlay(RenderGuiLayerEvent.Pre event) {
+        Minecraft minecraft = Minecraft.getInstance();
         boolean active = isCameraActive();
         if (!active || ClientPhotoCapture.isCapturing()) {
             return;
         }
 
         event.setCanceled(true);
-        Minecraft minecraft = Minecraft.getInstance();
         minecraft.options.setCameraType(CameraType.FIRST_PERSON);
         drawViewfinder(event.getGuiGraphics(), minecraft);
     }
@@ -53,21 +56,6 @@ public final class CameraClientEvents {
         if (CameraZoomManager.scroll(event.getScrollDeltaY())) {
             event.setCanceled(true);
         }
-    }
-
-    @SubscribeEvent
-    public void onKey(InputEvent.Key event) {
-        if (event.getKey() != GLFW.GLFW_KEY_ESCAPE || event.getAction() != GLFW.GLFW_PRESS) {
-            return;
-        }
-        Minecraft minecraft = Minecraft.getInstance();
-        if (minecraft.gui.screen() != null || (!isCameraActive() && !ClientPhotoCapture.isCapturing())) {
-            return;
-        }
-
-        ClientPhotoCapture.cancelPending();
-        lowerLocalCamera();
-        ClientPacketDistributor.sendToServer(new LowerCameraPayload());
     }
 
     @SubscribeEvent
@@ -87,11 +75,13 @@ public final class CameraClientEvents {
     @SubscribeEvent
     public void applyRestorationShake(ViewportEvent.ComputeCameraAngles event) {
         CameraShakeManager.apply(event);
+        CameraShutterEffect.apply(event);
     }
 
     @SubscribeEvent
     public void captureFrame(RenderFrameEvent.Pre event) {
-        CameraZoomManager.update(isCameraActive() && Minecraft.getInstance().gui.screen() == null);
+        CameraZoomManager.update((isCameraActive() || ClientPhotoCapture.isCapturing())
+                && Minecraft.getInstance().gui.screen() == null);
         ClientPhotoCapture.onRenderFrame(event);
     }
 
@@ -99,6 +89,22 @@ public final class CameraClientEvents {
     public void clearAlbumCaches(ClientPlayerNetworkEvent.LoggingOut event) {
         ClientAlbumState.clear();
         ClientPhotoCache.clear();
+        CameraShutterEffect.reset();
+    }
+
+    /**
+     * Consumes the first Escape press while the viewfinder is active.
+     * Called from the client keyboard mixin before vanilla opens the pause menu.
+     */
+    public static boolean consumeEscape() {
+        Minecraft minecraft = Minecraft.getInstance();
+        if (minecraft.gui.screen() != null || (!isCameraActive() && !ClientPhotoCapture.isCapturing())) {
+            return false;
+        }
+        ClientPhotoCapture.cancelPending();
+        lowerLocalCamera();
+        ClientPacketDistributor.sendToServer(new LowerCameraPayload());
+        return true;
     }
 
     public static boolean isCameraActive() {
@@ -133,34 +139,55 @@ public final class CameraClientEvents {
         int screenWidth = minecraft.getWindow().getGuiScaledWidth();
         int screenHeight = minecraft.getWindow().getGuiScaledHeight();
 
-        int frameWidth = Math.min((int) (screenWidth * 0.92F), Math.round(screenHeight * 0.86F * 4.0F / 3.0F));
-        int frameHeight = Math.round(frameWidth * 3.0F / 4.0F);
-        int x = (screenWidth - frameWidth) / 2;
-        int y = (screenHeight - frameHeight) / 2;
+        int frameSize = Math.min((int) (screenWidth * 0.92F), (int) (screenHeight * 0.86F));
+        int x = (screenWidth - frameSize) / 2;
+        int y = (screenHeight - frameSize) / 2;
 
         drawPanel(graphics, 0, 0, x, screenHeight);
-        drawPanel(graphics, x + frameWidth, 0, screenWidth - x - frameWidth, screenHeight);
-        drawPanel(graphics, x, 0, frameWidth, y);
-        drawPanel(graphics, x, y + frameHeight, frameWidth, screenHeight - y - frameHeight);
+        drawPanel(graphics, x + frameSize, 0, screenWidth - x - frameSize, screenHeight);
+        drawPanel(graphics, x, 0, frameSize, y);
+        drawPanel(graphics, x, y + frameSize, frameSize, screenHeight - y - frameSize);
 
         graphics.blit(RenderPipelines.GUI_TEXTURED, VIEWFINDER, x, y, 0.0F, 0.0F,
-                frameWidth, frameHeight, 512, 384, 512, 384);
+                frameSize, frameSize, 512, 384, 512, 384);
 
+        drawExposureHud(graphics, minecraft, x, y, frameSize);
+
+        if (CameraZoomManager.hasFramedRuin()) {
+            Component lock = Component.translatable("gui.thelostcamera.camera.ruin_lock");
+            graphics.text(minecraft.font, lock.getVisualOrderText(),
+                    x + (frameSize - minecraft.font.width(lock)) / 2,
+                    y + 10, RUIN_LOCK_TEXT, true);
+        }
+    }
+
+    private static void drawExposureHud(
+            GuiGraphicsExtractor graphics,
+            Minecraft minecraft,
+            int frameX,
+            int frameY,
+            int frameSize
+    ) {
         CameraZoomManager.Exposure exposure = CameraZoomManager.exposure();
         Component settings = Component.literal(
                 CameraZoomManager.focalLengthMm() + " mm   f/" + exposure.aperture()
                         + "   1/" + exposure.shutterDenominator() + " s   ISO " + exposure.iso()
         );
-        int settingsX = x + (frameWidth - minecraft.font.width(settings)) / 2;
-        graphics.text(minecraft.font, settings.getVisualOrderText(), settingsX,
-                y + frameHeight - minecraft.font.lineHeight - 8, 0xFFF2D0, true);
 
-        if (CameraZoomManager.hasFramedRuin()) {
-            Component lock = Component.translatable("gui.thelostcamera.camera.ruin_lock");
-            graphics.text(minecraft.font, lock.getVisualOrderText(),
-                    x + (frameWidth - minecraft.font.width(lock)) / 2,
-                    y + 10, 0xFFE3A0, true);
-        }
+        int horizontalPadding = 10;
+        int verticalPadding = 4;
+        int settingsWidth = minecraft.font.width(settings);
+        int panelWidth = Math.min(frameSize - 20, settingsWidth + horizontalPadding * 2);
+        int panelHeight = minecraft.font.lineHeight + verticalPadding * 2;
+        int panelX = frameX + (frameSize - panelWidth) / 2;
+        int panelY = frameY + frameSize - panelHeight - 7;
+
+        graphics.fill(panelX, panelY, panelX + panelWidth, panelY + panelHeight, EXPOSURE_PANEL);
+        graphics.outline(panelX, panelY, panelWidth, panelHeight, EXPOSURE_BORDER);
+
+        int settingsX = panelX + (panelWidth - settingsWidth) / 2;
+        int settingsY = panelY + verticalPadding;
+        graphics.text(minecraft.font, settings.getVisualOrderText(), settingsX, settingsY, EXPOSURE_TEXT, true);
     }
 
     private static void drawPanel(GuiGraphicsExtractor graphics, int x, int y, int width, int height) {

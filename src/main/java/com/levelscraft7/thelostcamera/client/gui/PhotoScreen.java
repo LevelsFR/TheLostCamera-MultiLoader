@@ -5,10 +5,8 @@ import com.levelscraft7.thelostcamera.client.photo.ClientPhotoCache;
 import com.levelscraft7.thelostcamera.data.PhotoData;
 import com.levelscraft7.thelostcamera.registry.ModDataComponents;
 import com.mojang.blaze3d.platform.NativeImage;
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
-import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.network.chat.Component;
@@ -23,15 +21,14 @@ import java.util.List;
 import java.util.Locale;
 
 /** Lossless fullscreen photograph viewer with an optional metadata overlay. */
-public final class PhotoScreen extends AbstractContainerScreen<DummyPhotoMenu> {
-    private static final Identifier DARK_PANEL = Identifier.fromNamespaceAndPath(
-            TheLostCamera.MOD_ID, "textures/gui/dark_panel.png"
-    );
+public final class PhotoScreen extends Screen {
     private static final Identifier INFO_PANEL = Identifier.fromNamespaceAndPath(
             TheLostCamera.MOD_ID, "textures/gui/album_info_panel.png"
     );
     private static final int TEXT = 0xFF3A2A1D;
     private static final int GOLD = 0xFF9A6427;
+    private static final int PHOTO_BORDER = 0xFFC8A879;
+    private static final int FAVORITE_BORDER = 0xFFFFC857;
     private static final int INFO_BUTTON_WIDTH = 62;
     private static final int INFO_BUTTON_HEIGHT = 22;
     private static final int INFO_BUTTON_MARGIN = 10;
@@ -40,6 +37,7 @@ public final class PhotoScreen extends AbstractContainerScreen<DummyPhotoMenu> {
 
     private final PhotoData photoData;
     private final Screen parent;
+    private final boolean favorite;
     private boolean showMetadata;
     private Bounds photoBounds;
 
@@ -52,10 +50,24 @@ public final class PhotoScreen extends AbstractContainerScreen<DummyPhotoMenu> {
     }
 
     public PhotoScreen(PhotoData photoData, Screen parent) {
-        super(new DummyPhotoMenu(), Minecraft.getInstance().player.getInventory(),
-                Component.translatable("gui.thelostcamera.photograph"));
+        this(photoData, parent, false);
+    }
+
+    public PhotoScreen(PhotoData photoData, Screen parent, boolean favorite) {
+        super(Component.translatable("gui.thelostcamera.photograph"));
         this.photoData = photoData;
         this.parent = parent;
+        this.favorite = favorite;
+    }
+
+    @Override
+    public boolean isPauseScreen() {
+        return false;
+    }
+
+    @Override
+    public boolean isInGameUi() {
+        return true;
     }
 
     @Override
@@ -77,26 +89,20 @@ public final class PhotoScreen extends AbstractContainerScreen<DummyPhotoMenu> {
             return;
         }
 
-        float availableWidth = width * 0.94F;
-        float availableHeight = height * 0.90F;
-        float screenRatio = availableWidth / availableHeight;
-        float imageRatio = (float) image.getWidth() / image.getHeight();
-
-        int drawWidth;
-        int drawHeight;
-        if (screenRatio > imageRatio) {
-            drawHeight = (int) availableHeight;
-            drawWidth = (int) (drawHeight * imageRatio);
-        } else {
-            drawWidth = (int) availableWidth;
-            drawHeight = (int) (drawWidth / imageRatio);
+        int drawSize = Math.min((int) (width * 0.94F), (int) (height * 0.90F));
+        int x = (width - drawSize) / 2;
+        int y = (height - drawSize) / 2;
+        int cropSize = Math.min(image.getWidth(), image.getHeight());
+        float cropX = (image.getWidth() - cropSize) / 2.0F;
+        float cropY = (image.getHeight() - cropSize) / 2.0F;
+        photoBounds = new Bounds(x, y, drawSize, drawSize);
+        graphics.blit(RenderPipelines.GUI_TEXTURED, texture, x, y, cropX, cropY,
+                drawSize, drawSize, cropSize, cropSize, image.getWidth(), image.getHeight());
+        int outlineThickness = favorite ? 2 : 1;
+        int outlineColor = favorite ? FAVORITE_BORDER : PHOTO_BORDER;
+        for (int inset = 1; inset <= outlineThickness; inset++) {
+            graphics.outline(x - inset, y - inset, drawSize + inset * 2, drawSize + inset * 2, outlineColor);
         }
-
-        int x = (width - drawWidth) / 2;
-        int y = (height - drawHeight) / 2;
-        photoBounds = new Bounds(x, y, drawWidth, drawHeight);
-        graphics.blit(RenderPipelines.GUI_TEXTURED, texture, x, y, 0.0F, 0.0F,
-                drawWidth, drawHeight, image.getWidth(), image.getHeight(), image.getWidth(), image.getHeight());
 
         drawInfoButton(graphics, mouseX, mouseY);
         if (showMetadata) {
@@ -107,16 +113,20 @@ public final class PhotoScreen extends AbstractContainerScreen<DummyPhotoMenu> {
     private void drawInfoButton(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
         Bounds button = infoButtonBounds();
         boolean hovered = button.contains(mouseX, mouseY);
-        drawPanel(graphics, button.x, button.y, button.width, button.height);
-        Component label = Component.literal(showMetadata ? "Hide" : "Infos");
-        int color = hovered || showMetadata ? 0xFFE4A4 : 0xFFFFFF;
+        graphics.fill(button.x, button.y, button.x + button.width, button.y + button.height, 0xEFD1B27A);
+        graphics.outline(button.x, button.y, button.width, button.height, 0xFF6B4528);
+        Component label = Component.translatable(showMetadata
+                ? "gui.thelostcamera.photo.hide_info"
+                : "gui.thelostcamera.photo.show_info");
+        int color = hovered || showMetadata ? GOLD : TEXT;
         graphics.text(font, label.getVisualOrderText(), button.x + (button.width - font.width(label)) / 2,
-                button.y + (button.height - font.lineHeight) / 2, color, false);
+                button.y + (button.height - font.lineHeight) / 2 + 1, color, false);
     }
 
+
     private void drawMetadata(GuiGraphicsExtractor graphics) {
-        int panelWidth = Math.min(340, width - 24);
-        int panelHeight = photoData.hasRuin() ? 202 : 184;
+        int panelWidth = Math.min(360, width - 24);
+        int panelHeight = photoData.hasRuin() ? 214 : 194;
         int x = Math.max(12, width - panelWidth - 12);
         int y = infoButtonBounds().y + INFO_BUTTON_HEIGHT + 6;
         drawInfoPanel(graphics, x, y, panelWidth, panelHeight);
@@ -126,24 +136,44 @@ public final class PhotoScreen extends AbstractContainerScreen<DummyPhotoMenu> {
         int lineY = y + 10;
         int textWidth = panelWidth - 24;
 
-        lineY = drawLine(graphics, Component.literal("Informations de la photo"), lineX, lineY, textWidth, GOLD);
-        lineY = drawLine(graphics, Component.literal("Photographe : " + photoData.photographer()), lineX, lineY, textWidth, TEXT);
-        lineY = drawLine(graphics, Component.literal("Date : " + DATE_FORMAT.format(Instant.ofEpochMilli(photoData.capturedAt()))), lineX, lineY, textWidth, TEXT);
-        lineY = drawLine(graphics, Component.literal("Dimension : " + photoData.dimension()), lineX, lineY, textWidth, TEXT);
-        lineY = drawLine(graphics, Component.literal("Coordonnees : X " + photoData.x() + " / Y " + photoData.y() + " / Z " + photoData.z()), lineX, lineY, textWidth, TEXT);
-        lineY = drawLine(graphics, Component.literal("Orientation : yaw " + Math.round(photoData.yaw()) + " deg / pitch "
-                + Math.round(photoData.pitch()) + " deg"), lineX, lineY, textWidth, TEXT);
-        lineY = drawLine(graphics, Component.literal("Focale : " + settings.focalLengthMm() + " mm"), lineX, lineY, textWidth, GOLD);
-        lineY = drawLine(graphics, Component.literal("Diaph : f/" + formatAperture(settings.aperture())), lineX, lineY, textWidth, GOLD);
-        lineY = drawLine(graphics, Component.literal("Vitesse : 1/" + settings.shutterDenominator() + " s"), lineX, lineY, textWidth, GOLD);
-        lineY = drawLine(graphics, Component.literal("ISO : " + settings.iso()), lineX, lineY, textWidth, GOLD);
-        lineY = drawLine(graphics, Component.literal("Meteo : " + weatherLabel(photoData.weather())), lineX, lineY, textWidth, TEXT);
-        lineY = drawLine(graphics, Component.literal("Image : " + resolutionLabel() + " / PNG 4:3"), lineX, lineY, textWidth, TEXT);
+        lineY = drawLine(graphics, Component.translatable("gui.thelostcamera.photo.info_title"), lineX, lineY, textWidth, GOLD);
+        lineY = drawLine(graphics, Component.translatable("gui.thelostcamera.photo.photographer", photoData.photographer()), lineX, lineY, textWidth, TEXT);
+        lineY = drawLine(graphics, Component.translatable("gui.thelostcamera.photo.date",
+                DATE_FORMAT.format(Instant.ofEpochMilli(photoData.capturedAt()))), lineX, lineY, textWidth, TEXT);
+        lineY = drawLine(graphics, Component.translatable("gui.thelostcamera.photo.dimension", photoData.dimension()), lineX, lineY, textWidth, TEXT);
+        lineY = drawLine(graphics, Component.translatable("gui.thelostcamera.photo.coordinates",
+                photoData.x(), photoData.y(), photoData.z()), lineX, lineY, textWidth, TEXT);
+        lineY = drawLine(graphics, Component.translatable("gui.thelostcamera.photo.orientation",
+                Math.round(photoData.yaw()), Math.round(photoData.pitch())), lineX, lineY, textWidth, TEXT);
+        lineY = drawLine(graphics, Component.translatable("gui.thelostcamera.photo.focal", settings.focalLengthMm()), lineX, lineY, textWidth, GOLD);
+        lineY = drawLine(graphics, Component.translatable("gui.thelostcamera.photo.aperture", formatAperture(settings.aperture())), lineX, lineY, textWidth, GOLD);
+        lineY = drawLine(graphics, Component.translatable("gui.thelostcamera.photo.shutter", settings.shutterDenominator()), lineX, lineY, textWidth, GOLD);
+        lineY = drawLine(graphics, Component.translatable("gui.thelostcamera.photo.iso", settings.iso()), lineX, lineY, textWidth, GOLD);
+        lineY = drawLine(graphics, Component.translatable("gui.thelostcamera.photo.weather",
+                Component.translatable("tooltip.thelostcamera.weather." + photoData.weather())), lineX, lineY, textWidth, TEXT);
+        lineY = drawLine(graphics, Component.translatable("gui.thelostcamera.photo.image", resolutionLabel()), lineX, lineY, textWidth, TEXT);
         if (photoData.hasRuin()) {
-            lineY = drawLine(graphics, Component.literal("Ruine : " + photoData.ruinId()), lineX, lineY, textWidth, GOLD);
-            drawLine(graphics, Component.literal("Restauration : " + (photoData.restorationTriggered() ? "declenchee" : "non declenchee")),
+            lineY = drawLine(graphics, Component.translatable("gui.thelostcamera.photo.ruin", ruinLabel()), lineX, lineY, textWidth, GOLD);
+            drawLine(graphics, Component.translatable("gui.thelostcamera.photo.restoration",
+                            Component.translatable(photoData.restorationTriggered()
+                                    ? "gui.thelostcamera.photo.restoration_triggered"
+                                    : "gui.thelostcamera.photo.restoration_not_triggered")),
                     lineX, lineY, textWidth, GOLD);
         }
+    }
+
+    private Component resolutionLabel() {
+        if (photoData.hasResolution()) {
+            return Component.translatable("gui.thelostcamera.photo.resolution_value",
+                    photoData.imageWidth(), photoData.imageHeight());
+        }
+        return Component.translatable("gui.thelostcamera.photo.resolution_unknown");
+    }
+
+    private Component ruinLabel() {
+        return com.levelscraft7.thelostcamera.ruin.RuinCatalog.find(photoData.ruinId())
+                .<Component>map(entry -> Component.translatable(entry.nameKey()))
+                .orElse(Component.literal(photoData.ruinId()));
     }
 
     private int drawLine(GuiGraphicsExtractor graphics, Component line, int x, int y, int width, int color) {
@@ -158,25 +188,6 @@ public final class PhotoScreen extends AbstractContainerScreen<DummyPhotoMenu> {
         return String.format(Locale.ROOT, "%.1f", aperture);
     }
 
-    private String resolutionLabel() {
-        if (photoData.hasResolution()) {
-            return photoData.imageWidth() + " x " + photoData.imageHeight() + " px";
-        }
-        return "resolution inconnue";
-    }
-
-    private static String weatherLabel(String weather) {
-        return switch (weather) {
-            case "rain" -> "pluie";
-            case "thunder" -> "orage";
-            default -> "degage";
-        };
-    }
-
-    private void drawPanel(GuiGraphicsExtractor graphics, int x, int y, int width, int height) {
-        graphics.blit(RenderPipelines.GUI_TEXTURED, DARK_PANEL, x, y, 0.0F, 0.0F,
-                width, height, 1, 1, 1, 1);
-    }
 
     private void drawInfoPanel(GuiGraphicsExtractor graphics, int x, int y, int width, int height) {
         graphics.blit(RenderPipelines.GUI_TEXTURED, INFO_PANEL, x, y, 0.0F, 0.0F,
@@ -217,9 +228,6 @@ public final class PhotoScreen extends AbstractContainerScreen<DummyPhotoMenu> {
             super.onClose();
         }
     }
-
-    @Override protected void extractLabels(GuiGraphicsExtractor graphics, int mouseX, int mouseY) { }
-    @Override public void extractBackground(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) { }
 
     private record Bounds(int x, int y, int width, int height) {
         private boolean contains(double mouseX, double mouseY) {

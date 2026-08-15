@@ -3,6 +3,8 @@ package com.levelscraft7.thelostcamera.photo;
 import com.levelscraft7.thelostcamera.TheLostCamera;
 import com.levelscraft7.thelostcamera.config.ModConfig;
 import com.levelscraft7.thelostcamera.data.PhotoData;
+import com.levelscraft7.thelostcamera.data.RuinPhotoData;
+import com.levelscraft7.thelostcamera.album.PlayerAlbumStorage;
 import com.levelscraft7.thelostcamera.item.PhotoAlbumItem;
 import com.levelscraft7.thelostcamera.network.payload.CaptureRequestPayload;
 import com.levelscraft7.thelostcamera.registry.ModDataComponents;
@@ -19,6 +21,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.Containers;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
+import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import net.neoforged.neoforge.network.PacketDistributor;
 
 import java.io.IOException;
@@ -31,8 +34,42 @@ public final class PhotoCaptureManager {
     private static final Map<UUID, PendingCapture> PENDING = new HashMap<>();
     private static final Map<UUID, CaptureClock> LAST_CAPTURE = new HashMap<>();
     private static final long CAPTURE_TIMEOUT_MILLIS = 30_000L;
+    private static MinecraftServer activeServer;
 
     private PhotoCaptureManager() {
+    }
+
+    public static void onServerTick(ServerTickEvent.Post event) {
+        MinecraftServer server = event.getServer();
+        if (activeServer != server) {
+            activeServer = server;
+            PENDING.clear();
+            LAST_CAPTURE.clear();
+            return;
+        }
+        if (server.getTickCount() % 20 != 0 || PENDING.isEmpty()) {
+            return;
+        }
+
+        long now = System.currentTimeMillis();
+        Iterator<Map.Entry<UUID, PendingCapture>> iterator = PENDING.entrySet().iterator();
+        while (iterator.hasNext()) {
+            PendingCapture pending = iterator.next().getValue();
+            if (pending.server != server || now - pending.createdAtMillis <= CAPTURE_TIMEOUT_MILLIS) {
+                continue;
+            }
+
+            ServerPlayer player = server.getPlayerList().getPlayer(pending.playerId);
+            if (player == null && !pending.frameConfirmed) {
+                // Keep a tiny unconfirmed entry so the plate can still be refunded if the player reconnects.
+                continue;
+            }
+
+            iterator.remove();
+            if (player != null) {
+                refundPlate(player, pending);
+            }
+        }
     }
 
     public static CaptureResult beginCapture(ServerPlayer player) {
@@ -82,7 +119,7 @@ public final class PhotoCaptureManager {
                 0,
                 0,
                 ruinId,
-                ruin != null
+                ruin != null && !ruinAlreadyRestored
         );
 
         PENDING.put(imageId, new PendingCapture(
@@ -101,6 +138,31 @@ public final class PhotoCaptureManager {
 
         PacketDistributor.sendToPlayer(player, new CaptureRequestPayload(imageId));
         return ruin == null ? CaptureResult.NORMAL_PHOTO : CaptureResult.RUIN_PHOTO;
+    }
+
+    public static void confirmCapturedFrame(
+            ServerPlayer player,
+            UUID imageId,
+            PhotoData.CameraSettings cameraSettings
+    ) {
+        PendingCapture pending = PENDING.get(imageId);
+        if (pending == null
+                || pending.server != player.level().getServer()
+                || !pending.playerId.equals(player.getUUID())
+                || pending.frameConfirmed) {
+            return;
+        }
+        pending.photoData = pending.photoData.withCameraSettings(sanitizeCameraSettings(cameraSettings));
+        pending.frameConfirmed = true;
+        player.level().playSound(null, player.blockPosition(), net.minecraft.sounds.SoundEvents.SPYGLASS_USE,
+                net.minecraft.sounds.SoundSource.PLAYERS, 0.42F, 1.65F);
+        player.level().playSound(null, player.blockPosition(), net.minecraft.sounds.SoundEvents.BOOK_PAGE_TURN,
+                net.minecraft.sounds.SoundSource.PLAYERS, 0.24F, 1.85F);
+        try {
+            startRestoration(player, pending);
+        } catch (RuntimeException exception) {
+            TheLostCamera.LOGGER.error("Failed to start early restoration for photograph {}", imageId, exception);
+        }
     }
 
     public static void acceptChunk(
@@ -129,14 +191,14 @@ public final class PhotoCaptureManager {
         }
 
         byte[] image = pending.imageBytes();
-        if (!looksLikePng(image)) {
+        if (!looksLikePng(image) || !PhotoStorage.validatePng(image, pending.imageWidth, pending.imageHeight)) {
             cancel(imageId, player, "message.thelostcamera.invalid_photo");
             return;
         }
 
         try {
             PhotoStorage.save(player, imageId, image);
-            storeOrGivePhoto(player, pending.photoData.withResolution(pending.imageWidth, pending.imageHeight));
+            storeOrGivePhoto(player, pending, pending.photoData.withResolution(pending.imageWidth, pending.imageHeight));
             PENDING.remove(imageId);
         } catch (IOException exception) {
             TheLostCamera.LOGGER.error("Failed to save photograph {}", imageId, exception);
@@ -145,7 +207,9 @@ public final class PhotoCaptureManager {
         }
 
         try {
-            startRestoration(player, pending);
+            if (!pending.frameConfirmed) {
+                startRestoration(player, pending);
+            }
         } catch (RuntimeException exception) {
             TheLostCamera.LOGGER.error(
                     "Failed to start restoration for photograph {} / ruin {} at {}",
@@ -156,6 +220,8 @@ public final class PhotoCaptureManager {
             );
         }
 
+        player.level().playSound(null, player.blockPosition(), net.minecraft.sounds.SoundEvents.EXPERIENCE_ORB_PICKUP,
+                net.minecraft.sounds.SoundSource.PLAYERS, 0.35F, 1.48F);
         player.sendOverlayMessage(Component.translatable("message.thelostcamera.photo_saved"));
     }
 
@@ -171,6 +237,18 @@ public final class PhotoCaptureManager {
             return;
         }
         cancel(imageId, player, "message.thelostcamera.capture_failed");
+    }
+
+    private static PhotoData.CameraSettings sanitizeCameraSettings(PhotoData.CameraSettings settings) {
+        if (settings == null) {
+            return PhotoData.CameraSettings.DEFAULT;
+        }
+        return new PhotoData.CameraSettings(
+                Math.max(35, Math.min(135, settings.focalLengthMm())),
+                Math.max(18, Math.min(160, settings.apertureTenths())),
+                Math.max(8, Math.min(2_000, settings.shutterDenominator())),
+                Math.max(100, Math.min(6_400, settings.iso()))
+        );
     }
 
     private static PhotoData.CameraSettings cameraSettingsFor(ServerPlayer player, long worldTime) {
@@ -270,18 +348,28 @@ public final class PhotoCaptureManager {
         }
     }
 
-    private static void storeOrGivePhoto(ServerPlayer player, PhotoData photoData) {
+    private static void storeOrGivePhoto(ServerPlayer player, PendingCapture pending, PhotoData photoData) {
+        RuinPhotoData ruinPhoto = pending.anchorPos == null ? null : new RuinPhotoData(
+                pending.dimension.toString(),
+                pending.anchorPos.getX(),
+                pending.anchorPos.getY(),
+                pending.anchorPos.getZ(),
+                pending.ruinAlreadyRestored ? "restored" : "before"
+        );
+
         ItemStack photograph = new ItemStack(ModItems.PHOTOGRAPH.get());
         photograph.set(ModDataComponents.PHOTO_DATA, photoData);
-
-        if (photoData.hasRuin()
-                && PhotoAlbumItem.hasOwnedAlbum(player)
-                && PhotoAlbumItem.archivePhoto(player, photoData)) {
-            player.sendSystemMessage(Component.translatable("message.thelostcamera.photo_archived_automatically"));
-            return;
+        if (ruinPhoto != null) {
+            photograph.set(ModDataComponents.RUIN_PHOTO_DATA, ruinPhoto);
         }
 
-        if (!player.addItem(photograph)) {
+        boolean archived = PhotoAlbumItem.hasOwnedAlbum(player)
+                && PlayerAlbumStorage.add(player, photoData, ruinPhoto);
+        if (archived) {
+            player.sendSystemMessage(Component.translatable("message.thelostcamera.photo_archived_automatically"));
+        }
+
+        if (!archived && !player.addItem(photograph)) {
             Containers.dropItemStack(
                     player.level(),
                     player.getX(),
@@ -291,7 +379,7 @@ public final class PhotoCaptureManager {
             );
         }
 
-        if (photoData.restorationTriggered()) {
+        if (photoData.restorationTriggered() && !archived) {
             player.sendSystemMessage(Component.translatable("message.thelostcamera.historical_photo_unarchived"));
         }
     }
@@ -338,7 +426,7 @@ public final class PhotoCaptureManager {
     }
 
     private static void refundPlate(ServerPlayer player, PendingCapture pending) {
-        if (!pending.plateConsumed) {
+        if (!pending.plateConsumed || pending.frameConfirmed) {
             return;
         }
         ItemStack plate = new ItemStack(ModItems.PHOTOGRAPHIC_PLATE.get());
@@ -365,7 +453,7 @@ public final class PhotoCaptureManager {
         private final BlockPos anchorPos;
         private final RestorationRotation ruinRotation;
         private final boolean ruinAlreadyRestored;
-        private final PhotoData photoData;
+        private PhotoData photoData;
         private final int maximumLength;
         private final boolean plateConsumed;
         private final long createdAtMillis;
@@ -373,6 +461,7 @@ public final class PhotoCaptureManager {
         private int nextOffset;
         private int imageWidth;
         private int imageHeight;
+        private boolean frameConfirmed;
 
         private PendingCapture(
                 UUID playerId,
@@ -408,7 +497,8 @@ public final class PhotoCaptureManager {
             if (totalLength <= 0 || totalLength > maximumLength || bytes.length == 0 || bytes.length > 28_000) {
                 return false;
             }
-            if (width <= 0 || height <= 0 || width > 7_680 || height > 7_680) {
+            int maximumDimension = ModConfig.PHOTO_MAX_DIMENSION.get();
+            if (width <= 0 || height <= 0 || width > maximumDimension || height > maximumDimension) {
                 return false;
             }
             if (offset < 0 || offset != nextOffset || offset + bytes.length > totalLength) {

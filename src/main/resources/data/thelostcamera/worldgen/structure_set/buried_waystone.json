@@ -1,0 +1,15 @@
+{
+  "structures": [
+    {
+      "structure": "thelostcamera:buried_waystone",
+      "weight": 1
+    }
+  ],
+  "placement": {
+    "type": "minecraft:random_spread",
+    "spacing": 43,
+    "separation": 21,
+    "salt": 260812,
+    "frequency": 0.58
+  }
+}

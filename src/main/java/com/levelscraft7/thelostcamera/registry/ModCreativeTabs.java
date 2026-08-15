@@ -22,6 +22,10 @@ public final class ModCreativeTabs {
                         output.accept(ModItems.PHOTOGRAPHIC_PLATE.get());
                         output.accept(ModItems.PHOTO_ALBUM.get());
                         output.accept(ModItems.PHOTOGRAPH.get());
+                        output.accept(ModItems.PHOTOGRAPHIC_PAPER.get());
+                        output.accept(ModItems.PHOTOGRAPHIC_PRINT.get());
+                        output.accept(ModItems.DARKROOM_TABLE.get());
+                        output.accept(ModItems.PHOTO_FRAME.get());
                     })
                     .build()
     );

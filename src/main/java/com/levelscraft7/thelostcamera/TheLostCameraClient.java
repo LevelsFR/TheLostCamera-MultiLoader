@@ -7,6 +7,9 @@ import com.levelscraft7.thelostcamera.client.network.ClientPayloadHandlers;
 import com.levelscraft7.thelostcamera.client.photo.ClientPhotoCache;
 import com.levelscraft7.thelostcamera.network.ClientPayloadBridge;
 import com.levelscraft7.thelostcamera.network.ClientUiBridge;
+import com.levelscraft7.thelostcamera.client.render.PhotoFrameRenderer;
+import com.levelscraft7.thelostcamera.registry.ModBlockEntities;
+import net.neoforged.neoforge.client.event.EntityRenderersEvent;
 import net.minecraft.client.Minecraft;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.item.ItemStack;
@@ -24,6 +27,7 @@ public final class TheLostCameraClient {
     public TheLostCameraClient(IEventBus modEventBus, ModContainer container) {
         container.registerExtensionPoint(IConfigScreenFactory.class, ConfigurationScreen::new);
         modEventBus.addListener(TheLostCameraClient::clientSetup);
+        modEventBus.addListener(TheLostCameraClient::registerRenderers);
         ClientUiBridge.installPhotoScreenOpener(TheLostCameraClient::openPhotoScreen);
         ClientUiBridge.installAlbumScreenOpener(TheLostCameraClient::openAlbumScreen);
         ClientPayloadBridge.install(
@@ -32,6 +36,7 @@ public final class TheLostCameraClient {
                 ClientPayloadHandlers::handleUnavailablePhoto,
                 ClientPayloadHandlers::handleRestorationShake,
                 ClientPayloadHandlers::handleOpenAlbum,
+                ClientPayloadHandlers::handleOpenDarkroom,
                 ClientPayloadHandlers::handleAlbumSnapshot
         );
     }
@@ -42,6 +47,10 @@ public final class TheLostCameraClient {
 
     public static void openAlbumScreen(InteractionHand hand) {
         Minecraft.getInstance().setScreenAndShow(new AlbumScreen(hand));
+    }
+
+    private static void registerRenderers(EntityRenderersEvent.RegisterRenderers event) {
+        event.registerBlockEntityRenderer(ModBlockEntities.PHOTO_FRAME.get(), PhotoFrameRenderer::new);
     }
 
     private static void clientSetup(FMLClientSetupEvent event) {

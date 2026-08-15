@@ -1,0 +1,15 @@
+{
+  "structures": [
+    {
+      "structure": "thelostcamera:sunscar_pyramid",
+      "weight": 1
+    }
+  ],
+  "placement": {
+    "type": "minecraft:random_spread",
+    "spacing": 62,
+    "separation": 31,
+    "salt": 260811,
+    "frequency": 0.46
+  }
+}

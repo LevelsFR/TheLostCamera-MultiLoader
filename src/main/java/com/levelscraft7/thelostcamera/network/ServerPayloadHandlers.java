@@ -7,6 +7,7 @@ import com.levelscraft7.thelostcamera.item.PhotoAlbumItem;
 import com.levelscraft7.thelostcamera.network.payload.AlbumSnapshotPayload;
 import com.levelscraft7.thelostcamera.network.payload.ArchivePhotoPayload;
 import com.levelscraft7.thelostcamera.network.payload.CameraFocalPayload;
+import com.levelscraft7.thelostcamera.network.payload.CaptureReadyPayload;
 import com.levelscraft7.thelostcamera.network.payload.PhotoCaptureFailedPayload;
 import com.levelscraft7.thelostcamera.network.payload.PhotoImageRequestPayload;
 import com.levelscraft7.thelostcamera.network.payload.PhotoUploadChunkPayload;
@@ -14,6 +15,7 @@ import com.levelscraft7.thelostcamera.network.payload.RequestAlbumPayload;
 import com.levelscraft7.thelostcamera.network.payload.SetPhotoArchivedPayload;
 import com.levelscraft7.thelostcamera.network.payload.SetPhotoFavoritePayload;
 import com.levelscraft7.thelostcamera.photo.PhotoCaptureManager;
+import com.levelscraft7.thelostcamera.photo.PhotoDevelopmentManager;
 import com.levelscraft7.thelostcamera.registry.ModDataComponents;
 import com.levelscraft7.thelostcamera.registry.ModItems;
 import net.minecraft.network.chat.Component;
@@ -25,6 +27,27 @@ import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 public final class ServerPayloadHandlers {
     private ServerPayloadHandlers() {
+    }
+
+    public static void handleDevelopPrint(com.levelscraft7.thelostcamera.network.payload.DevelopPrintPayload payload, IPayloadContext context) {
+        if (context.player() instanceof ServerPlayer player) {
+            PhotoDevelopmentManager.request(player, payload.imageId(), payload.darkroomPos());
+        }
+    }
+
+    public static void handleCaptureReady(CaptureReadyPayload payload, IPayloadContext context) {
+        if (context.player() instanceof ServerPlayer player) {
+            PhotoCaptureManager.confirmCapturedFrame(
+                    player,
+                    payload.imageId(),
+                    new PhotoData.CameraSettings(
+                            payload.focalLengthMm(),
+                            payload.apertureTenths(),
+                            payload.shutterDenominator(),
+                            payload.iso()
+                    )
+            );
+        }
     }
 
     public static void handlePhotoUpload(PhotoUploadChunkPayload payload, IPayloadContext context) {
@@ -53,7 +76,7 @@ public final class ServerPayloadHandlers {
     }
 
     public static void handleArchivePhoto(ArchivePhotoPayload payload, IPayloadContext context) {
-        if (!(context.player() instanceof ServerPlayer player) || !validAlbum(player, payload.mainHand())) {
+        if (!(context.player() instanceof ServerPlayer player) || !PhotoAlbumItem.hasOwnedAlbum(player)) {
             return;
         }
         int slot = payload.inventorySlot();
@@ -65,7 +88,8 @@ public final class ServerPayloadHandlers {
             return;
         }
         PhotoData data = photograph.get(ModDataComponents.PHOTO_DATA);
-        if (data == null || !PlayerAlbumStorage.add(player, data)) {
+        com.levelscraft7.thelostcamera.data.RuinPhotoData ruinPhoto = photograph.get(ModDataComponents.RUIN_PHOTO_DATA);
+        if (data == null || !PlayerAlbumStorage.add(player, data, ruinPhoto)) {
             player.sendOverlayMessage(Component.translatable("message.thelostcamera.photo_already_archived"));
             return;
         }
@@ -120,6 +144,8 @@ public final class ServerPayloadHandlers {
         }
 
         if (lowered) {
+            player.level().playSound(null, player.blockPosition(), net.minecraft.sounds.SoundEvents.SPYGLASS_STOP_USING,
+                    net.minecraft.sounds.SoundSource.PLAYERS, 0.65F, 0.82F);
             player.sendOverlayMessage(Component.translatable("message.thelostcamera.camera_closed"));
         }
     }

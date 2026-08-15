@@ -101,6 +101,10 @@ public final class RuinAnchorBlockEntity extends BlockEntity {
         return anchor;
     }
 
+    public RestorationRotation currentRotationForPersistence() {
+        return currentRotation();
+    }
+
     public static void tickVirtual(ServerLevel level, RuinAnchorBlockEntity anchor) {
         tick(level, anchor.worldPosition, Blocks.AIR.defaultBlockState(), anchor);
     }
@@ -128,7 +132,7 @@ public final class RuinAnchorBlockEntity extends BlockEntity {
         }
 
         anchor.enforceFinalTemplate(level);
-        anchor.clearNonPlayerEntities(level);
+        anchor.clearAuthoredEntities(level);
         for (RestorationEntity decoration : anchor.decorativeEntities) {
             anchor.spawnAuthoredEntity(level, decoration, rotation, false);
         }
@@ -310,7 +314,7 @@ public final class RuinAnchorBlockEntity extends BlockEntity {
             livingEntities = List.copyOf(living);
 
             // A reload during the animation must never duplicate authored entities.
-            clearNonPlayerEntities(level);
+            clearAuthoredEntities(level);
             decorativeEntityIndex = 0;
             int completedWave = completedWave();
             if (completedWave != Integer.MIN_VALUE) {
@@ -627,6 +631,7 @@ public final class RuinAnchorBlockEntity extends BlockEntity {
 
         float transformedYaw = entity.rotate(rotation.vanillaRotation());
         entity.snapTo(worldX, worldY, worldZ, transformedYaw, entity.getXRot());
+        entity.addTag(authoredEntityTag());
         level.addFreshEntityWithPassengers(entity);
         if (effects) {
             level.sendParticles(
@@ -676,12 +681,24 @@ public final class RuinAnchorBlockEntity extends BlockEntity {
         return new AABB(minX, minY, minZ, maxX + 1.0D, maxY + 1.0D, maxZ + 1.0D);
     }
 
-    private void clearNonPlayerEntities(ServerLevel level) {
+    private void clearAuthoredEntities(ServerLevel level) {
         AABB bounds = restorationBounds();
-        List<Entity> entities = level.getEntitiesOfClass(Entity.class, bounds, entity -> !(entity instanceof Player));
+        String authoredTag = authoredEntityTag();
+        List<Entity> entities = level.getEntitiesOfClass(
+                Entity.class,
+                bounds,
+                entity -> entity.entityTags().contains(authoredTag)
+        );
         for (Entity entity : entities) {
             entity.discard();
         }
+    }
+
+    private String authoredEntityTag() {
+        return "tlc_restored_" + Integer.toUnsignedString(
+                (ruinId + "@" + worldPosition.getX() + "," + worldPosition.getY() + "," + worldPosition.getZ()).hashCode(),
+                36
+        );
     }
 
     private void enforceFinalTemplate(ServerLevel level) {
@@ -713,8 +730,8 @@ public final class RuinAnchorBlockEntity extends BlockEntity {
     private void finishRestoration(ServerLevel level) {
         enforceFinalTemplate(level);
 
-        // Entity state is authoritative too: keep players, replace everything else.
-        clearNonPlayerEntities(level);
+        // Replace only entities previously authored by this exact restoration. Player and world entities are untouched.
+        clearAuthoredEntities(level);
         RestorationRotation rotation = currentRotation();
         for (RestorationEntity decoration : decorativeEntities) {
             spawnAuthoredEntity(level, decoration, rotation, false);
@@ -722,6 +739,8 @@ public final class RuinAnchorBlockEntity extends BlockEntity {
         for (RestorationEntity living : livingEntities) {
             spawnAuthoredEntity(level, living, rotation, false);
         }
+
+        AABB climaxBounds = restorationBounds();
 
         restoring = false;
         restored = true;
@@ -737,26 +756,70 @@ public final class RuinAnchorBlockEntity extends BlockEntity {
         resonanceTicks = 140;
         setChanged();
 
-        level.sendParticles(
-                ParticleTypes.END_ROD,
-                worldPosition.getX() + 0.5D,
-                worldPosition.getY() + 2.0D,
-                worldPosition.getZ() + 0.5D,
-                42,
-                1.4D,
-                1.2D,
-                1.4D,
-                0.09D
-        );
-        level.playSound(
-                null,
-                worldPosition,
-                SoundEvents.BEACON_ACTIVATE,
-                SoundSource.BLOCKS,
-                3.4F,
-                0.62F
-        );
+        playRestorationClimax(level, climaxBounds);
         sendShake(level, 28, 1.05F);
+    }
+
+    private void playRestorationClimax(ServerLevel level, AABB bounds) {
+        double x = (bounds.minX + bounds.maxX) * 0.5D;
+        double baseY = bounds.minY;
+        double centreY = (bounds.minY + bounds.maxY) * 0.5D;
+        double topY = bounds.maxY - 0.5D;
+        double z = (bounds.minZ + bounds.maxZ) * 0.5D;
+
+        level.sendParticles(ParticleTypes.END_ROD, x, centreY, z, 42, 1.4D, 1.2D, 1.4D, 0.09D);
+        level.playSound(null, worldPosition, SoundEvents.BEACON_ACTIVATE,
+                SoundSource.BLOCKS, 3.4F, 0.62F);
+
+        switch (ruinId) {
+            case "thelostcamera:solstice_shrine" -> {
+                level.sendParticles(ParticleTypes.FLAME, x, baseY + 5.5D, z, 54, 2.2D, 1.4D, 2.2D, 0.035D);
+                level.sendParticles(ParticleTypes.ENCHANT, x, centreY, z, 72, 2.8D, 2.0D, 2.8D, 0.18D);
+                level.playSound(null, worldPosition, SoundEvents.AMETHYST_BLOCK_RESONATE,
+                        SoundSource.BLOCKS, 4.0F, 1.45F);
+            }
+            case "thelostcamera:orma_homestead" -> {
+                level.sendParticles(ParticleTypes.FLAME, x + 3.0D, baseY + 3.0D, z - 1.0D,
+                        36, 0.55D, 0.75D, 0.55D, 0.025D);
+                level.sendParticles(ParticleTypes.HAPPY_VILLAGER, x, baseY + 3.0D, z,
+                        28, 3.0D, 1.5D, 3.0D, 0.03D);
+                level.playSound(null, worldPosition,
+                        Blocks.CAMPFIRE.defaultBlockState().getSoundType().getPlaceSound(),
+                        SoundSource.BLOCKS, 2.2F, 0.84F);
+            }
+            case "thelostcamera:frontier_watchtower" -> {
+                level.sendParticles(ParticleTypes.CLOUD, x, topY, z,
+                        48, 1.8D, 0.45D, 1.8D, 0.08D);
+                level.sendParticles(ParticleTypes.FLAME, x, topY + 0.5D, z,
+                        30, 0.75D, 0.80D, 0.75D, 0.03D);
+                level.playSound(null, worldPosition, SoundEvents.END_PORTAL_FRAME_FILL,
+                        SoundSource.BLOCKS, 3.0F, 0.74F);
+            }
+            case "thelostcamera:sunscar_pyramid" -> {
+                level.sendParticles(ParticleTypes.FLAME, x, topY, z,
+                        64, 1.1D, 1.6D, 1.1D, 0.045D);
+                level.sendParticles(ParticleTypes.WAX_ON, x, centreY, z,
+                        88, 4.0D, 3.0D, 4.0D, 0.12D);
+                level.playSound(null, worldPosition, SoundEvents.END_PORTAL_FRAME_FILL,
+                        SoundSource.BLOCKS, 3.6F, 1.22F);
+            }
+            case "thelostcamera:buried_waystone" -> {
+                level.sendParticles(ParticleTypes.WAX_ON, x, topY - 1.0D, z,
+                        36, 1.2D, 1.8D, 1.2D, 0.08D);
+                level.playSound(null, worldPosition, SoundEvents.AMETHYST_BLOCK_RESONATE,
+                        SoundSource.BLOCKS, 2.4F, 0.82F);
+            }
+            case "thelostcamera:moonwell" -> {
+                level.sendParticles(ParticleTypes.SPLASH, x, baseY + 2.0D, z,
+                        52, 1.7D, 0.5D, 1.7D, 0.08D);
+                level.sendParticles(ParticleTypes.END_ROD, x, centreY, z,
+                        32, 1.2D, 1.2D, 1.2D, 0.04D);
+                level.playSound(null, worldPosition, SoundEvents.AMETHYST_BLOCK_RESONATE,
+                        SoundSource.BLOCKS, 2.8F, 1.65F);
+            }
+            default -> {
+            }
+        }
     }
 
     private void abortRestoration() {

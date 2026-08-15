@@ -3,11 +3,13 @@ package com.levelscraft7.thelostcamera.client.network;
 import com.levelscraft7.thelostcamera.client.CameraShakeManager;
 import com.levelscraft7.thelostcamera.client.album.ClientAlbumState;
 import com.levelscraft7.thelostcamera.client.gui.AlbumScreen;
+import com.levelscraft7.thelostcamera.client.gui.DarkroomScreen;
 import com.levelscraft7.thelostcamera.client.photo.ClientPhotoCache;
 import com.levelscraft7.thelostcamera.client.photo.ClientPhotoCapture;
 import com.levelscraft7.thelostcamera.network.payload.AlbumSnapshotPayload;
 import com.levelscraft7.thelostcamera.network.payload.CaptureRequestPayload;
 import com.levelscraft7.thelostcamera.network.payload.OpenAlbumPayload;
+import com.levelscraft7.thelostcamera.network.payload.OpenDarkroomPayload;
 import com.levelscraft7.thelostcamera.network.payload.PhotoImageChunkPayload;
 import com.levelscraft7.thelostcamera.network.payload.PhotoUnavailablePayload;
 import com.levelscraft7.thelostcamera.network.payload.RestorationShakePayload;
@@ -40,7 +42,12 @@ public final class ClientPayloadHandlers {
         Minecraft.getInstance().setScreenAndShow(new AlbumScreen(hand));
     }
 
+    public static void handleOpenDarkroom(OpenDarkroomPayload payload, IPayloadContext context) {
+        Minecraft.getInstance().setScreenAndShow(new DarkroomScreen(payload.pos()));
+    }
+
     public static void handleAlbumSnapshot(AlbumSnapshotPayload payload, IPayloadContext context) {
         ClientAlbumState.replace(payload.photos());
+        ClientPhotoCache.preloadThumbnails(payload.photos());
     }
 }

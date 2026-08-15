@@ -2,7 +2,10 @@ package com.levelscraft7.thelostcamera;
 
 import com.levelscraft7.thelostcamera.config.ModConfig;
 import com.levelscraft7.thelostcamera.network.ModNetworking;
+import com.levelscraft7.thelostcamera.photo.PhotoCaptureManager;
+import com.levelscraft7.thelostcamera.photo.PhotoDevelopmentManager;
 import com.levelscraft7.thelostcamera.ruin.RuinDebugCommands;
+import com.levelscraft7.thelostcamera.ruin.RuinPresenceTracker;
 import com.levelscraft7.thelostcamera.ruin.VirtualRuinRestorationManager;
 import com.levelscraft7.thelostcamera.registry.ModBlockEntities;
 import com.levelscraft7.thelostcamera.registry.ModBlocks;
@@ -30,8 +33,13 @@ public final class TheLostCamera {
         ModConfig.register(modContainer);
         modEventBus.addListener(ModNetworking::register);
         NeoForge.EVENT_BUS.addListener(VirtualRuinRestorationManager::onServerTick);
+        NeoForge.EVENT_BUS.addListener(PhotoDevelopmentManager::onServerTick);
+        NeoForge.EVENT_BUS.addListener(PhotoCaptureManager::onServerTick);
+        NeoForge.EVENT_BUS.addListener(RuinPresenceTracker::onChunkLoad);
+        NeoForge.EVENT_BUS.addListener(RuinPresenceTracker::onChunkUnload);
+        NeoForge.EVENT_BUS.addListener(RuinPresenceTracker::onServerTick);
         NeoForge.EVENT_BUS.addListener(RuinDebugCommands::register);
 
-        LOGGER.info("The Lost Camera 0.1.0-alpha.9.1 foundation loaded");
+        LOGGER.info("The Lost Camera {} loaded", modContainer.getModInfo().getVersion());
     }
 }

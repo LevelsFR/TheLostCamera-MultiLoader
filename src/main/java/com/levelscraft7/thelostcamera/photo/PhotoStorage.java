@@ -14,6 +14,8 @@ import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Arrays;
@@ -22,8 +24,7 @@ import java.util.UUID;
 public final class PhotoStorage {
     private static final LevelResource PHOTO_DIRECTORY = new LevelResource("thelostcamera/photos");
     private static final int NETWORK_CHUNK_SIZE = 28_000;
-    private static final int THUMBNAIL_WIDTH = 320;
-    private static final int THUMBNAIL_HEIGHT = 240;
+    private static final int THUMBNAIL_SIZE = 640;
 
     private PhotoStorage() {
     }
@@ -72,6 +73,36 @@ public final class PhotoStorage {
         return generated;
     }
 
+    public static boolean validatePng(byte[] bytes, int expectedWidth, int expectedHeight) {
+        if (bytes.length < 33 || expectedWidth <= 0 || expectedHeight <= 0) {
+            return false;
+        }
+
+        // Validate the IHDR dimensions before ImageIO allocates the decoded image.
+        ByteBuffer header = ByteBuffer.wrap(bytes, 16, 8).order(ByteOrder.BIG_ENDIAN);
+        int declaredWidth = header.getInt();
+        int declaredHeight = header.getInt();
+        long declaredPixels = (long) declaredWidth * declaredHeight;
+        if (declaredWidth != expectedWidth
+                || declaredHeight != expectedHeight
+                || declaredWidth > 8_192
+                || declaredHeight > 8_192
+                || declaredPixels <= 0L
+                || declaredPixels > 67_108_864L
+                || Math.abs((double) declaredWidth / declaredHeight - 1.0D) >= 0.02D) {
+            return false;
+        }
+
+        try (ByteArrayInputStream input = new ByteArrayInputStream(bytes)) {
+            BufferedImage image = ImageIO.read(input);
+            return image != null
+                    && image.getWidth() == declaredWidth
+                    && image.getHeight() == declaredHeight;
+        } catch (IOException | RuntimeException exception) {
+            return false;
+        }
+    }
+
     public static void sendToClient(ServerPlayer player, UUID imageId, boolean thumbnail) {
         try {
             byte[] image = thumbnail ? loadThumbnail(player, imageId) : load(player, imageId);
@@ -107,12 +138,16 @@ public final class PhotoStorage {
             throw new IOException("Unsupported photograph image");
         }
 
-        BufferedImage thumbnail = new BufferedImage(THUMBNAIL_WIDTH, THUMBNAIL_HEIGHT, BufferedImage.TYPE_INT_ARGB);
+        int cropSize = Math.min(source.getWidth(), source.getHeight());
+        int cropX = (source.getWidth() - cropSize) / 2;
+        int cropY = (source.getHeight() - cropSize) / 2;
+        BufferedImage thumbnail = new BufferedImage(THUMBNAIL_SIZE, THUMBNAIL_SIZE, BufferedImage.TYPE_INT_ARGB);
         Graphics2D graphics = thumbnail.createGraphics();
         try {
             graphics.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BICUBIC);
             graphics.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
-            graphics.drawImage(source, 0, 0, THUMBNAIL_WIDTH, THUMBNAIL_HEIGHT, null);
+            graphics.drawImage(source, 0, 0, THUMBNAIL_SIZE, THUMBNAIL_SIZE,
+                    cropX, cropY, cropX + cropSize, cropY + cropSize, null);
         } finally {
             graphics.dispose();
         }

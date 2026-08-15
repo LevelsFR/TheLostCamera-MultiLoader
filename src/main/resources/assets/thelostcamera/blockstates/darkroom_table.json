@@ -1,0 +1,8 @@
+{
+  "variants": {
+    "facing=north": { "model": "thelostcamera:block/darkroom_table" },
+    "facing=south": { "model": "thelostcamera:block/darkroom_table", "y": 180 },
+    "facing=east": { "model": "thelostcamera:block/darkroom_table", "y": 90 },
+    "facing=west": { "model": "thelostcamera:block/darkroom_table", "y": 270 }
+  }
+}

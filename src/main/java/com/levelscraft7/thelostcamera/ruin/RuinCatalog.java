@@ -7,20 +7,22 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * Central authored definition list. The catalog intentionally contains only
- * the three custom structures currently validated for the mod.
+ * Central authored definition list for every ruin/restored template pair.
  */
 public final class RuinCatalog {
     private static final List<Entry> ENTRIES = List.of(
-            entry("solstice_shrine", RuinSizeClass.MEDIUM),
-            entry("orma_homestead", RuinSizeClass.MEDIUM),
-            entry("frontier_watchtower", RuinSizeClass.SMALL)
+            entry("solstice_shrine", RuinSizeClass.MEDIUM, RuinRarity.COMMON),
+            entry("orma_homestead", RuinSizeClass.MEDIUM, RuinRarity.COMMON),
+            entry("frontier_watchtower", RuinSizeClass.SMALL, RuinRarity.COMMON),
+            entry("sunscar_pyramid", RuinSizeClass.MEDIUM, RuinRarity.UNCOMMON),
+            entry("buried_waystone", RuinSizeClass.SMALL, RuinRarity.COMMON),
+            entry("moonwell", RuinSizeClass.SMALL, RuinRarity.COMMON)
     );
 
     private RuinCatalog() {
     }
 
-    private static Entry entry(String path, RuinSizeClass size) {
+    private static Entry entry(String path, RuinSizeClass size, RuinRarity rarity) {
         String key = "ruin.thelostcamera." + path;
         return new Entry(
                 Identifier.fromNamespaceAndPath(TheLostCamera.MOD_ID, path),
@@ -30,7 +32,7 @@ public final class RuinCatalog {
                 key + ".description",
                 key + ".echo",
                 size,
-                RuinRarity.COMMON
+                rarity
         );
     }
 

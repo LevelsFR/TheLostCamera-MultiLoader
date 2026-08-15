@@ -1,0 +1,15 @@
+{
+  "structures": [
+    {
+      "structure": "thelostcamera:moonwell",
+      "weight": 1
+    }
+  ],
+  "placement": {
+    "type": "minecraft:random_spread",
+    "spacing": 41,
+    "separation": 20,
+    "salt": 260813,
+    "frequency": 0.58
+  }
+}

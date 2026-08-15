@@ -20,12 +20,12 @@ public final class ModConfig {
             .defineInRange("photoCooldownTicks", 40, 0, 1200);
 
     public static final ModConfigSpec.IntValue PHOTO_MAX_DIMENSION = BUILDER
-            .comment("Maximum width or height after the native frame has been cropped to the camera's 4:3 sensor.")
-            .defineInRange("photoNativeMaxDimension", 3840, 640, 7680);
+            .comment("Maximum width or height after the native frame has been cropped to the camera's square sensor.")
+            .defineInRange("photoNativeMaxDimension", 5120, 640, 8192);
 
     public static final ModConfigSpec.IntValue MAX_PHOTO_BYTES = BUILDER
             .comment("Maximum accepted lossless PNG photograph size in bytes.")
-            .defineInRange("maxPhotoBytes", 12_000_000, 256_000, 24_000_000);
+            .defineInRange("maxPhotoBytes", 20_000_000, 256_000, 32_000_000);
 
     public static final ModConfigSpec.IntValue RESTORATION_MIN_DURATION_TICKS = BUILDER
             .comment("Minimum target restoration duration for a small ruin, in ticks.")

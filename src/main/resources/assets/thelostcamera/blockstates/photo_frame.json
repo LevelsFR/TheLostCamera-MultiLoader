@@ -1,0 +1,8 @@
+{
+  "variants": {
+    "facing=north":{"model":"thelostcamera:block/photo_frame"},
+    "facing=east":{"model":"thelostcamera:block/photo_frame","y":90},
+    "facing=south":{"model":"thelostcamera:block/photo_frame","y":180},
+    "facing=west":{"model":"thelostcamera:block/photo_frame","y":270}
+  }
+}

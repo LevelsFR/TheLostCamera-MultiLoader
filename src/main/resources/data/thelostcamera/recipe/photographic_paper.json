@@ -1,0 +1,5 @@
+{
+  "type":"crafting_shapeless",
+  "ingredients":["minecraft:paper","minecraft:black_dye","minecraft:glowstone_dust"],
+  "result":{"id":"thelostcamera:photographic_paper","count":2}
+}

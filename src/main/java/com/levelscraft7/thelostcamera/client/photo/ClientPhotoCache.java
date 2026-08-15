@@ -1,6 +1,7 @@
 package com.levelscraft7.thelostcamera.client.photo;
 
 import com.levelscraft7.thelostcamera.TheLostCamera;
+import com.levelscraft7.thelostcamera.album.StoredPhoto;
 import com.levelscraft7.thelostcamera.network.payload.PhotoImageRequestPayload;
 import com.mojang.blaze3d.platform.NativeImage;
 import net.minecraft.client.Minecraft;
@@ -23,11 +24,10 @@ import java.util.UUID;
 
 /**
  * Client photo texture cache.
- * Album grids request compact 4:3 thumbnails, while the full PNG is only decoded when a photograph is opened.
+ * Album grids request compact square thumbnails, while the full PNG is only decoded when a photograph is opened.
  */
 public final class ClientPhotoCache {
-    private static final int THUMBNAIL_WIDTH = 320;
-    private static final int THUMBNAIL_HEIGHT = 240;
+    private static final int THUMBNAIL_SIZE = 320;
 
     private static final Map<UUID, DynamicTexture> FULL_TEXTURES = new HashMap<>();
     private static final Map<UUID, Identifier> FULL_IDENTIFIERS = new HashMap<>();
@@ -63,6 +63,19 @@ public final class ClientPhotoCache {
         return texture == null ? null : texture.getPixels();
     }
 
+    /** Starts thumbnail downloads as soon as album metadata arrives, before the first album frame is rendered. */
+    public static void preloadThumbnails(List<StoredPhoto> photos) {
+        for (StoredPhoto photo : photos) {
+            getOrRequest(photo.data().imageId(), RequestMode.THUMBNAIL);
+        }
+    }
+
+    /** Reuses the client-side capture so a newly taken photograph is already present when the album opens. */
+    public static void cacheCapturedPhoto(UUID imageId, BufferedImage image) {
+        registerThumbnailImageIfMissing(imageId, image);
+        UNAVAILABLE.remove(imageId);
+    }
+
     private static Identifier getOrRequest(UUID imageId, RequestMode requestedMode) {
         Identifier present = requestedMode == RequestMode.FULL
                 ? FULL_IDENTIFIERS.get(imageId)
@@ -86,7 +99,7 @@ public final class ClientPhotoCache {
     }
 
     public static void acceptChunk(UUID imageId, int offset, int totalLength, byte[] bytes) {
-        if (totalLength <= 0 || totalLength > 24_000_000 || bytes.length == 0) {
+        if (totalLength <= 0 || totalLength > 32_000_000 || bytes.length == 0) {
             return;
         }
 
@@ -174,10 +187,11 @@ public final class ClientPhotoCache {
         FULL_IDENTIFIERS.put(imageId, identifier);
     }
 
-    private static void registerThumbnailImageIfMissing(UUID imageId, BufferedImage thumbnail) {
+    private static void registerThumbnailImageIfMissing(UUID imageId, BufferedImage source) {
         if (THUMBNAIL_IDENTIFIERS.containsKey(imageId)) {
             return;
         }
+        BufferedImage thumbnail = createSquareThumbnail(source);
         NativeImage nativeImage = toNativeImage(thumbnail);
         Identifier identifier = Identifier.fromNamespaceAndPath(TheLostCamera.MOD_ID, "dynamic_photo_thumbnail/" + imageId);
         DynamicTexture texture = new DynamicTexture(identifier::toString, nativeImage);
@@ -191,17 +205,24 @@ public final class ClientPhotoCache {
             return;
         }
 
-        BufferedImage thumbnail = new BufferedImage(THUMBNAIL_WIDTH, THUMBNAIL_HEIGHT, BufferedImage.TYPE_INT_ARGB);
+        registerThumbnailImageIfMissing(imageId, source);
+    }
+
+    private static BufferedImage createSquareThumbnail(BufferedImage source) {
+        int cropSize = Math.min(source.getWidth(), source.getHeight());
+        int cropX = (source.getWidth() - cropSize) / 2;
+        int cropY = (source.getHeight() - cropSize) / 2;
+        BufferedImage thumbnail = new BufferedImage(THUMBNAIL_SIZE, THUMBNAIL_SIZE, BufferedImage.TYPE_INT_ARGB);
         Graphics2D graphics = thumbnail.createGraphics();
         try {
             graphics.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BICUBIC);
             graphics.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
-            graphics.drawImage(source, 0, 0, THUMBNAIL_WIDTH, THUMBNAIL_HEIGHT, null);
+            graphics.drawImage(source, 0, 0, THUMBNAIL_SIZE, THUMBNAIL_SIZE,
+                    cropX, cropY, cropX + cropSize, cropY + cropSize, null);
         } finally {
             graphics.dispose();
         }
-
-        registerThumbnailImageIfMissing(imageId, thumbnail);
+        return thumbnail;
     }
 
     private static NativeImage toNativeImage(BufferedImage image) {

@@ -12,6 +12,8 @@ import net.minecraft.ChatFormatting;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
@@ -46,6 +48,8 @@ public final class PhotoAlbumItem extends Item {
             return InteractionResult.FAIL;
         }
 
+        level.playSound(null, player.blockPosition(), SoundEvents.BOOK_PAGE_TURN,
+                SoundSource.PLAYERS, 0.70F, 0.92F);
         PacketDistributor.sendToPlayer(serverPlayer, new AlbumSnapshotPayload(PlayerAlbumStorage.load(serverPlayer)));
         PacketDistributor.sendToPlayer(serverPlayer, new OpenAlbumPayload(hand == InteractionHand.MAIN_HAND));
         return InteractionResult.SUCCESS;

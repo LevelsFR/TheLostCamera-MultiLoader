@@ -1,0 +1,6 @@
+{
+  "type":"crafting_shaped",
+  "pattern":["SSS","SGS","SSS"],
+  "key":{"S":"minecraft:stick","G":"minecraft:glass_pane"},
+  "result":{"id":"thelostcamera:photo_frame","count":1}
+}

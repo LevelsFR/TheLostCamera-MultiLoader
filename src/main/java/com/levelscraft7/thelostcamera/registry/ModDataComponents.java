@@ -2,6 +2,7 @@ package com.levelscraft7.thelostcamera.registry;
 
 import com.levelscraft7.thelostcamera.TheLostCamera;
 import com.levelscraft7.thelostcamera.data.PhotoData;
+import com.levelscraft7.thelostcamera.data.RuinPhotoData;
 import net.minecraft.core.component.DataComponentType;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.codec.ByteBufCodecs;
@@ -26,6 +27,11 @@ public final class ModDataComponents {
                     .networkSynchronized(PhotoData.STREAM_CODEC)
                     .build());
 
+    public static final DeferredHolder<DataComponentType<?>, DataComponentType<RuinPhotoData>> RUIN_PHOTO_DATA =
+            COMPONENTS.register("ruin_photo_data", () -> DataComponentType.<RuinPhotoData>builder()
+                    .persistent(RuinPhotoData.CODEC)
+                    .networkSynchronized(RuinPhotoData.STREAM_CODEC)
+                    .build());
 
     public static final DeferredHolder<DataComponentType<?>, DataComponentType<String>> ALBUM_OWNER =
             COMPONENTS.register("album_owner", () -> DataComponentType.<String>builder()

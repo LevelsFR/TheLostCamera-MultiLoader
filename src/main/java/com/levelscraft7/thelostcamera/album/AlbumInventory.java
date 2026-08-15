@@ -10,8 +10,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Persistent 54-slot photograph storage carried by the album ItemStack itself.
- * The vanilla container component survives drops, player death, world saves and item transfers.
+ * Legacy 54-slot container support for albums created by older alpha builds.
+ * Current albums use the player-owned server-side library; this class remains for migration compatibility.
  */
 public final class AlbumInventory {
     public static final int SIZE = 54;

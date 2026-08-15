@@ -2,6 +2,8 @@ package com.levelscraft7.thelostcamera.registry;
 
 import com.levelscraft7.thelostcamera.TheLostCamera;
 import com.levelscraft7.thelostcamera.block.RuinAnchorBlock;
+import com.levelscraft7.thelostcamera.block.DarkroomTableBlock;
+import com.levelscraft7.thelostcamera.block.PhotoFrameBlock;
 import net.minecraft.world.level.material.MapColor;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.registries.DeferredBlock;
@@ -22,6 +24,19 @@ public final class ModBlocks {
                     .noOcclusion()
                     .strength(-1.0F, 3_600_000.0F)
                     .noLootTable()
+    );
+
+
+    public static final DeferredBlock<DarkroomTableBlock> DARKROOM_TABLE = BLOCKS.registerBlock(
+            "darkroom_table",
+            DarkroomTableBlock::new,
+            properties -> properties.mapColor(MapColor.WOOD).strength(2.5F).noOcclusion()
+    );
+
+    public static final DeferredBlock<PhotoFrameBlock> PHOTO_FRAME = BLOCKS.registerBlock(
+            "photo_frame",
+            PhotoFrameBlock::new,
+            properties -> properties.mapColor(MapColor.WOOD).strength(0.8F).noOcclusion().noCollision()
     );
 
     private ModBlocks() {

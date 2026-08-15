@@ -49,6 +49,10 @@ public final class PhotographItem extends Item {
     ) {
         PhotoData data = stack.get(ModDataComponents.PHOTO_DATA);
         if (data == null) {
+            tooltip.accept(Component.translatable("tooltip.thelostcamera.photograph.empty")
+                    .withStyle(ChatFormatting.GRAY));
+            tooltip.accept(Component.translatable("tooltip.thelostcamera.photograph.open")
+                    .withStyle(ChatFormatting.DARK_GRAY));
             super.appendHoverText(stack, context, display, tooltip, flag);
             return;
         }
@@ -128,6 +132,8 @@ public final class PhotographItem extends Item {
             );
         }
 
+        tooltip.accept(Component.translatable("tooltip.thelostcamera.photograph.open")
+                .withStyle(ChatFormatting.DARK_GRAY));
         super.appendHoverText(stack, context, display, tooltip, flag);
     }
 

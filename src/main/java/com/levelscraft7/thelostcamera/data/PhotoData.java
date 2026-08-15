@@ -81,6 +81,28 @@ public record PhotoData(
         );
     }
 
+
+    public PhotoData withCameraSettings(CameraSettings settings) {
+        return new PhotoData(
+                imageId,
+                photographer,
+                capturedAt,
+                worldTime,
+                dimension,
+                x,
+                y,
+                z,
+                yaw,
+                pitch,
+                settings,
+                weather,
+                imageWidth,
+                imageHeight,
+                ruinId,
+                restorationTriggered
+        );
+    }
+
     public record CameraSettings(
             int focalLengthMm,
             int apertureTenths,

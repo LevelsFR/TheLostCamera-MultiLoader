@@ -4,7 +4,11 @@ import com.levelscraft7.thelostcamera.TheLostCamera;
 import com.levelscraft7.thelostcamera.item.LostCameraItem;
 import com.levelscraft7.thelostcamera.item.PhotoAlbumItem;
 import com.levelscraft7.thelostcamera.item.PhotographItem;
+import com.levelscraft7.thelostcamera.item.PhotographicPlateItem;
+import com.levelscraft7.thelostcamera.item.PhotographicPaperItem;
+import com.levelscraft7.thelostcamera.item.PhotographicPrintItem;
 import net.minecraft.world.item.Item;
+import net.minecraft.world.item.BlockItem;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.registries.DeferredItem;
 import net.neoforged.neoforge.registries.DeferredRegister;
@@ -24,8 +28,9 @@ public final class ModItems {
             properties -> properties.stacksTo(1)
     );
 
-    public static final DeferredItem<Item> PHOTOGRAPHIC_PLATE = ITEMS.registerSimpleItem(
+    public static final DeferredItem<PhotographicPlateItem> PHOTOGRAPHIC_PLATE = ITEMS.registerItem(
             "photographic_plate",
+            PhotographicPlateItem::new,
             properties -> properties.stacksTo(16)
     );
 
@@ -34,6 +39,22 @@ public final class ModItems {
             PhotoAlbumItem::new,
             properties -> properties.stacksTo(1)
     );
+
+
+    public static final DeferredItem<PhotographicPaperItem> PHOTOGRAPHIC_PAPER = ITEMS.registerItem(
+            "photographic_paper",
+            PhotographicPaperItem::new,
+            properties -> properties.stacksTo(32)
+    );
+
+    public static final DeferredItem<PhotographicPrintItem> PHOTOGRAPHIC_PRINT = ITEMS.registerItem(
+            "photographic_print",
+            PhotographicPrintItem::new,
+            properties -> properties.stacksTo(1)
+    );
+
+    public static final DeferredItem<BlockItem> DARKROOM_TABLE = ITEMS.registerSimpleBlockItem(ModBlocks.DARKROOM_TABLE);
+    public static final DeferredItem<BlockItem> PHOTO_FRAME = ITEMS.registerSimpleBlockItem(ModBlocks.PHOTO_FRAME);
 
     private ModItems() {
     }

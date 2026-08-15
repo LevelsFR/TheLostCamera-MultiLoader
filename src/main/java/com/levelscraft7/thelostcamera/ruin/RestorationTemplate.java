@@ -13,6 +13,7 @@ public record RestorationTemplate(
         int sizeZ,
         BlockPos ruinedAnchor,
         BlockPos restoredAnchor,
+        RestorationRotation restoredAlignment,
         Map<BlockPos, BlockState> ruinedBlocks,
         List<RestorationBlock> restoredTargets,
         List<RestorationEntity> restoredEntities

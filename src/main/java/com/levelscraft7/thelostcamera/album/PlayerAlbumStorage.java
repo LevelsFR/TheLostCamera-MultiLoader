@@ -4,6 +4,7 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.levelscraft7.thelostcamera.TheLostCamera;
 import com.levelscraft7.thelostcamera.data.PhotoData;
+import com.levelscraft7.thelostcamera.data.RuinPhotoData;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.storage.LevelResource;
 
@@ -47,6 +48,10 @@ public final class PlayerAlbumStorage {
     }
 
     public static boolean add(ServerPlayer player, PhotoData data) {
+        return add(player, data, null);
+    }
+
+    public static boolean add(ServerPlayer player, PhotoData data, RuinPhotoData ruinPhoto) {
         if (data == null || data.imageId() == null) {
             return false;
         }
@@ -54,7 +59,7 @@ public final class PlayerAlbumStorage {
         if (photos.stream().anyMatch(entry -> entry.data().imageId().equals(data.imageId()))) {
             return false;
         }
-        photos.add(new StoredPhoto(data, false, false));
+        photos.add(new StoredPhoto(data, false, false, ruinPhoto));
         return save(player, photos);
     }
 
@@ -90,6 +95,21 @@ public final class PlayerAlbumStorage {
 
     public static boolean setFavorite(ServerPlayer player, UUID imageId, boolean favorite) {
         return replace(player, imageId, entry -> entry.withFavorite(favorite));
+    }
+
+    public static boolean containsPhoto(ServerPlayer player, UUID imageId) {
+        return imageId != null && load(player).stream()
+                .anyMatch(entry -> entry.data().imageId().equals(imageId));
+    }
+
+    public static StoredPhoto findPhoto(ServerPlayer player, UUID imageId) {
+        if (imageId == null) {
+            return null;
+        }
+        return load(player).stream()
+                .filter(entry -> entry.data().imageId().equals(imageId))
+                .findFirst()
+                .orElse(null);
     }
 
     public static int photoCount(ServerPlayer player) {

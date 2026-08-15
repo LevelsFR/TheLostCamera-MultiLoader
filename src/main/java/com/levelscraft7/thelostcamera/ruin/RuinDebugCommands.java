@@ -20,6 +20,7 @@ public final class RuinDebugCommands {
     public static void register(RegisterCommandsEvent event) {
         CommandDispatcher<CommandSourceStack> dispatcher = event.getDispatcher();
         dispatcher.register(Commands.literal("thelostcamera")
+                .requires(RuinDebugCommands::isAdmin)
                 .then(Commands.literal("scan_ruin")
                         .executes(context -> scan(context.getSource())))
                 .then(Commands.literal("restore_nearest")
@@ -27,7 +28,6 @@ public final class RuinDebugCommands {
                 .then(Commands.literal("validate_ruins")
                         .executes(context -> validate(context.getSource())))
                 .then(Commands.literal("album")
-                        .requires(RuinDebugCommands::isAdmin)
                         .then(Commands.literal("clear")
                                 .executes(context -> clearAlbum(context.getSource(), context.getSource().getPlayerOrException()))
                                 .then(Commands.argument("player", EntityArgument.player())
@@ -116,7 +116,7 @@ public final class RuinDebugCommands {
             ServerPlayer player = source.getPlayer();
             return player == null || source.getServer().getPlayerList().isOp(new NameAndId(player.getGameProfile()));
         } catch (RuntimeException ignored) {
-            return true;
+            return false;
         }
     }
 

@@ -3,6 +3,7 @@ package com.levelscraft7.thelostcamera.network.payload;
 import com.levelscraft7.thelostcamera.TheLostCamera;
 import com.levelscraft7.thelostcamera.album.StoredPhoto;
 import com.levelscraft7.thelostcamera.data.PhotoData;
+import com.levelscraft7.thelostcamera.data.RuinPhotoData;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
@@ -28,6 +29,10 @@ public record AlbumSnapshotPayload(List<StoredPhoto> photos) implements CustomPa
             PhotoData.STREAM_CODEC.encode(buffer, entry.data());
             buffer.writeBoolean(entry.archived());
             buffer.writeBoolean(entry.favorite());
+            buffer.writeBoolean(entry.ruinPhoto() != null);
+            if (entry.ruinPhoto() != null) {
+                RuinPhotoData.STREAM_CODEC.encode(buffer, entry.ruinPhoto());
+            }
         }
     }
 
@@ -35,11 +40,11 @@ public record AlbumSnapshotPayload(List<StoredPhoto> photos) implements CustomPa
         int size = Math.min(buffer.readVarInt(), 4096);
         List<StoredPhoto> photos = new ArrayList<>(size);
         for (int index = 0; index < size; index++) {
-            photos.add(new StoredPhoto(
-                    PhotoData.STREAM_CODEC.decode(buffer),
-                    buffer.readBoolean(),
-                    buffer.readBoolean()
-            ));
+            PhotoData data = PhotoData.STREAM_CODEC.decode(buffer);
+            boolean archived = buffer.readBoolean();
+            boolean favorite = buffer.readBoolean();
+            RuinPhotoData ruinPhoto = buffer.readBoolean() ? RuinPhotoData.STREAM_CODEC.decode(buffer) : null;
+            photos.add(new StoredPhoto(data, archived, favorite, ruinPhoto));
         }
         return List.copyOf(photos);
     }
