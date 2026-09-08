@@ -14,9 +14,9 @@ public final class RuinCatalog {
             entry("solstice_shrine", RuinSizeClass.MEDIUM, RuinRarity.COMMON),
             entry("orma_homestead", RuinSizeClass.MEDIUM, RuinRarity.COMMON),
             entry("frontier_watchtower", RuinSizeClass.SMALL, RuinRarity.COMMON),
-            entry("sunscar_pyramid", RuinSizeClass.MEDIUM, RuinRarity.UNCOMMON),
-            entry("buried_waystone", RuinSizeClass.SMALL, RuinRarity.COMMON),
-            entry("moonwell", RuinSizeClass.SMALL, RuinRarity.COMMON)
+            entry("maia_pyramid", RuinSizeClass.SMALL, RuinRarity.UNCOMMON),
+            entry("watchers_waystone", RuinSizeClass.SMALL, RuinRarity.COMMON),
+            entry("watchers_sacred_basin", RuinSizeClass.MEDIUM, RuinRarity.RARE)
     );
 
     private RuinCatalog() {

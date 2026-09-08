@@ -795,27 +795,27 @@ public final class RuinAnchorBlockEntity extends BlockEntity {
                 level.playSound(null, worldPosition, SoundEvents.END_PORTAL_FRAME_FILL,
                         SoundSource.BLOCKS, 3.0F, 0.74F);
             }
-            case "thelostcamera:sunscar_pyramid" -> {
-                level.sendParticles(ParticleTypes.FLAME, x, topY, z,
-                        64, 1.1D, 1.6D, 1.1D, 0.045D);
-                level.sendParticles(ParticleTypes.WAX_ON, x, centreY, z,
-                        88, 4.0D, 3.0D, 4.0D, 0.12D);
-                level.playSound(null, worldPosition, SoundEvents.END_PORTAL_FRAME_FILL,
-                        SoundSource.BLOCKS, 3.6F, 1.22F);
+            case "thelostcamera:maia_pyramid" -> {
+                level.sendParticles(ParticleTypes.COMPOSTER, x, baseY + 2.5D, z,
+                        54, 3.8D, 1.4D, 3.8D, 0.08D);
+                level.sendParticles(ParticleTypes.ENCHANT, x, centreY, z,
+                        72, 2.2D, 2.2D, 2.2D, 0.16D);
+                level.playSound(null, worldPosition, SoundEvents.AMETHYST_BLOCK_RESONATE,
+                        SoundSource.BLOCKS, 3.4F, 1.18F);
             }
-            case "thelostcamera:buried_waystone" -> {
-                level.sendParticles(ParticleTypes.WAX_ON, x, topY - 1.0D, z,
+            case "thelostcamera:watchers_waystone" -> {
+                level.sendParticles(ParticleTypes.WAX_ON, x, topY - 0.5D, z,
                         36, 1.2D, 1.8D, 1.2D, 0.08D);
                 level.playSound(null, worldPosition, SoundEvents.AMETHYST_BLOCK_RESONATE,
                         SoundSource.BLOCKS, 2.4F, 0.82F);
             }
-            case "thelostcamera:moonwell" -> {
-                level.sendParticles(ParticleTypes.SPLASH, x, baseY + 2.0D, z,
-                        52, 1.7D, 0.5D, 1.7D, 0.08D);
+            case "thelostcamera:watchers_sacred_basin" -> {
+                level.sendParticles(ParticleTypes.SPLASH, x, baseY + 3.0D, z,
+                        72, 3.8D, 0.8D, 3.8D, 0.10D);
                 level.sendParticles(ParticleTypes.END_ROD, x, centreY, z,
-                        32, 1.2D, 1.2D, 1.2D, 0.04D);
+                        46, 2.4D, 1.8D, 2.4D, 0.045D);
                 level.playSound(null, worldPosition, SoundEvents.AMETHYST_BLOCK_RESONATE,
-                        SoundSource.BLOCKS, 2.8F, 1.65F);
+                        SoundSource.BLOCKS, 3.2F, 1.58F);
             }
             default -> {
             }
