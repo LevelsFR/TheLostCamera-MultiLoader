@@ -1,0 +1,4 @@
+allprojects {
+    group = project.mod_group_id
+    version = project.mod_version
+}

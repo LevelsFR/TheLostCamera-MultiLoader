@@ -13,6 +13,8 @@ out/
 !**/src/**/out/
 
 .run/
+!.run/
+!.run/*.run.xml
 
 ### Eclipse ###
 .apt_generated

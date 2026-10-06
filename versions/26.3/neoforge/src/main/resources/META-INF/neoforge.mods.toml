@@ -1,0 +1,31 @@
+modLoader="javafml"
+loaderVersion="[4,)"
+license="MIT"
+
+[[mixins]]
+config="thelostcamera.mixins.json"
+
+[[mods]]
+modId="thelostcamera"
+version="${version}"
+displayName="The Lost Camera"
+iconFile="thelostcamera_logo.png"
+credits="Created for CurseForge ModJam 2026"
+authors="LevelsFR"
+description='''
+Photograph forgotten ruins and watch them rebuild themselves, preserving their lost appearance as physical photos.
+'''
+
+[[dependencies.thelostcamera]]
+modId="neoforge"
+type="required"
+versionRange="[26.3,)"
+ordering="NONE"
+side="BOTH"
+
+[[dependencies.thelostcamera]]
+modId="minecraft"
+type="required"
+versionRange="[26.3]"
+ordering="NONE"
+side="BOTH"

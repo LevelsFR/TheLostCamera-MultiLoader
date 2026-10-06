@@ -1,0 +1,52 @@
+plugins {
+    id 'net.fabricmc.fabric-loom' version '1.17.12'
+    id 'maven-publish'
+}
+
+repositories {
+    mavenCentral()
+    maven { url = 'https://maven.fabricmc.net/' }
+}
+
+loom {
+    mods {
+        thelostcamera { sourceSet sourceSets.main }
+    }
+}
+
+sourceSets.main.java.srcDirs = [
+        rootProject.file('../../common/src/main/java'),
+        rootProject.file('../../fabric/src/main/java'),
+        project.file('src/main/java')
+]
+sourceSets.main.resources.srcDirs = [
+        rootProject.file('../../common/src/main/resources'),
+        rootProject.file('common/src/main/resources'),
+        project.file('src/main/resources')
+]
+
+dependencies {
+    minecraft "com.mojang:minecraft:${rootProject.minecraft_version}"
+    implementation "net.fabricmc:fabric-loader:${rootProject.fabric_loader_version}"
+    implementation "net.fabricmc.fabric-api:fabric-api:${rootProject.fabric_api_version}"
+}
+
+java.toolchain.languageVersion = JavaLanguageVersion.of(Integer.parseInt(rootProject.java_version))
+tasks.withType(JavaCompile).configureEach {
+    options.release = Integer.parseInt(rootProject.java_version)
+    options.encoding = 'UTF-8'
+}
+
+// Minecraft 26.3's LWJGL native path can corrupt its bundled allocator on this Windows/OpenGL setup.
+// Keep the workaround scoped to the development client run; it does not alter the released mod JAR.
+tasks.named('runClient') {
+    jvmArgs '-Dorg.lwjgl.system.allocator=system'
+}
+
+processResources {
+    duplicatesStrategy = DuplicatesStrategy.INCLUDE
+    inputs.property 'version', project.version
+    filesMatching('fabric.mod.json') { expand version: project.version }
+}
+
+base { archivesName = "${rootProject.mod_id}-fabric-${rootProject.minecraft_version}" }

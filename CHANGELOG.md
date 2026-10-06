@@ -1,3 +1,10 @@
+# The Lost Camera v0.5
+
+## New
+
+- Added support for **Fabric** and **NeoForge** on **Minecraft 26.1.2, 26.2 and 26.3**.
+- Added three new discoverable ruins: **The Maya Pyramid**, **Watcher’s Waystone** and **The Watchers’ Sacred Basin**.
+
 # The Lost Camera v0.2.2
 
 ## New

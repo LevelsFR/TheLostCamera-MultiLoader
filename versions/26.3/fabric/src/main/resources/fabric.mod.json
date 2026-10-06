@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "id": "thelostcamera",
+  "version": "${version}",
+  "name": "The Lost Camera",
+  "description": "Photograph forgotten ruins and watch them rebuild themselves.",
+  "authors": ["LevelsFR"],
+  "icon": "thelostcamera_logo.png",
+  "license": "MIT",
+  "environment": "*",
+  "entrypoints": {
+    "main": ["com.levelscraft7.thelostcamera.TheLostCameraFabric"],
+    "client": ["com.levelscraft7.thelostcamera.client.TheLostCameraFabricClient"]
+  },
+  "mixins": ["thelostcamera.mixins.json"],
+  "depends": {
+    "fabricloader": ">=0.19.5",
+    "minecraft": "=26.3",
+    "java": ">=25",
+    "fabric-api": "*"
+  }
+}

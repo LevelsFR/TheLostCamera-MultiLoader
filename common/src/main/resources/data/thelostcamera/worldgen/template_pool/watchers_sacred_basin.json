@@ -1,0 +1,14 @@
+{
+  "fallback": "minecraft:empty",
+  "elements": [
+    {
+      "weight": 1,
+      "element": {
+        "element_type": "minecraft:single_pool_element",
+        "location": "thelostcamera:ruined/watchers_sacred_basin",
+        "processors": "thelostcamera:ignore_markers_and_air",
+        "projection": "rigid"
+      }
+    }
+  ]
+}

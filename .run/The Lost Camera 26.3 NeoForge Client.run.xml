@@ -1,0 +1,20 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration name="The Lost Camera 26.3 NeoForge Client" type="GradleRunConfiguration" factoryName="Gradle">
+    <ExternalSystemSettings>
+      <option name="executionName" value="26.3 NeoForge Client" />
+      <option name="externalProjectPath" value="$PROJECT_DIR$/versions/26.3" />
+      <option name="externalSystemIdString" value="GRADLE" />
+      <option name="scriptParameters" value="--console=plain" />
+      <option name="taskNames"><list><option value=":neoforge:runClient" /></list></option>
+      <option name="vmOptions" />
+    </ExternalSystemSettings>
+    <ExternalSystemDebugServerProcess>true</ExternalSystemDebugServerProcess>
+    <ExternalSystemReattachDebugProcess>true</ExternalSystemReattachDebugProcess>
+    <ExternalSystemDebugDisabled>false</ExternalSystemDebugDisabled>
+    <DebugAllEnabled>false</DebugAllEnabled>
+    <RunAsTest>false</RunAsTest>
+    <GradleProfilingDisabled>false</GradleProfilingDisabled>
+    <GradleCoverageDisabled>false</GradleCoverageDisabled>
+    <method v="2" />
+  </configuration>
+</component>

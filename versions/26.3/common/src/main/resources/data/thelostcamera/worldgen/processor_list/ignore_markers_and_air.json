@@ -1,0 +1,12 @@
+{
+  "processors": [
+    {
+      "processor_type": "minecraft:block_ignore",
+      "blocks": [
+        "minecraft:air",
+        "minecraft:structure_void",
+        "thelostcamera:ruin_anchor"
+      ]
+    }
+  ]
+}

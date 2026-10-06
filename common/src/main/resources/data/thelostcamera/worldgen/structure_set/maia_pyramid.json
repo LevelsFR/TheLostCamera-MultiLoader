@@ -1,0 +1,15 @@
+{
+  "structures": [
+    {
+      "structure": "thelostcamera:maia_pyramid",
+      "weight": 1
+    }
+  ],
+  "placement": {
+    "type": "minecraft:random_spread",
+    "spacing": 52,
+    "separation": 26,
+    "salt": 260805,
+    "frequency": 0.75
+  }
+}

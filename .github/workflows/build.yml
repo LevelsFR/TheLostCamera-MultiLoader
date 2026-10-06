@@ -1,4 +1,4 @@
-name: Build
+name: Build all supported targets
 
 on: [push, pull_request]
 
@@ -26,5 +26,5 @@ jobs:
       - name: Make Gradle wrapper executable
         run: chmod +x ./gradlew
 
-      - name: Build with Gradle
-        run: ./gradlew build
+      - name: Build all Fabric and NeoForge targets
+        run: ./gradlew assembleAllVersions --no-daemon
